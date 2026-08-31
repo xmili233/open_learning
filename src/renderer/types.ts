@@ -30,10 +30,23 @@ export interface BoardState {
   version: number;
 }
 
+export interface PluginStatus {
+  state:
+    | "checking"
+    | "codex_missing"
+    | "disabled"
+    | "error"
+    | "installed"
+    | "not_installed";
+  version?: string;
+}
+
 declare global {
   interface Window {
     openLearning: {
+      copyMarketplaceUrl: () => Promise<void>;
       getState: () => Promise<BoardState>;
+      getPluginStatus: () => Promise<PluginStatus>;
       onState: (callback: (state: BoardState) => void) => () => void;
       select: (ids: string[]) => Promise<BoardState>;
     };

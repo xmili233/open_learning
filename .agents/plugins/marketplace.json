@@ -1,0 +1,20 @@
+{
+  "name": "open-learning",
+  "interface": {
+    "displayName": "Open Learning"
+  },
+  "plugins": [
+    {
+      "name": "open-learning",
+      "source": {
+        "source": "local",
+        "path": "./plugins/open-learning"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

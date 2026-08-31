@@ -36,6 +36,16 @@ npm start
 
 Keep the Electron app open before connecting the MCP server. During local development, the bundled Plugin manifest is under `plugins/open-learning`.
 
+Install the Plugin from Codex:
+
+1. Open **Plugins** in Codex.
+2. Choose **Add Marketplace**.
+3. Add `https://github.com/xmili233/open_learning`.
+4. Install **Open Learning**, then start a new Codex task.
+
+The Electron app checks the local Codex Plugin list every five seconds and
+continues automatically once the installed Plugin is enabled.
+
 `npm run build:mcp` produces the self-contained MCP runtime stored inside the Plugin. `npm run check` rebuilds and tests that exact runtime.
 
 The first real Voice test must happen in a new Codex Voice task after the Plugin/MCP server is installed. P0 passes only when the board appears before the corresponding spoken explanation and can be modified repeatedly during the lesson.

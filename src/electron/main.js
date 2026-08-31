@@ -1,8 +1,9 @@
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, clipboard, ipcMain } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { BoardStore } from "../board-state.js";
 import { createBoardIpcServer } from "../local-ipc.js";
+import { checkOpenLearningPlugin } from "../plugin-status.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const store = new BoardStore();
@@ -47,6 +48,10 @@ ipcMain.handle("board:select", (_event, ids) => {
   const state = store.select(ids);
   sendState(state);
   return state;
+});
+ipcMain.handle("plugin:get-status", () => checkOpenLearningPlugin());
+ipcMain.handle("plugin:copy-marketplace-url", () => {
+  clipboard.writeText("https://github.com/xmili233/open_learning");
 });
 
 if (!hasSingleInstanceLock) app.quit();
