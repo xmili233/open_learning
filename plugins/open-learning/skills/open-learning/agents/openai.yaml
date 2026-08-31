@@ -3,12 +3,5 @@ interface:
   short_description: "Teach with a live, agent-operated visual workspace"
   default_prompt: "Use $open-learning to teach me this topic with the live board."
 
-dependencies:
-  tools:
-    - type: "mcp"
-      value: "open_learning"
-      description: "Open Learning local teaching canvas"
-      transport: "stdio"
-
 policy:
   allow_implicit_invocation: true

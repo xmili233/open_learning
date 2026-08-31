@@ -17,6 +17,9 @@ test("local IPC carries the complete teaching-board loop", async (t) => {
     await rm(directory, { recursive: true, force: true });
   });
 
+  const status = await callBoardIpc("status", {}, { runtimeFile });
+  assert.deepEqual(status, { ok: true, running: true, session_id: null, version: 0 });
+
   const opened = await callBoardIpc("open", { title: "递归", language: "zh", objective: "看见调用与返回" }, { runtimeFile });
   const patched = await callBoardIpc("patch", {
     session_id: opened.session_id,

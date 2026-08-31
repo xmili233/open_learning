@@ -1,12 +1,17 @@
 {
   "name": "open-learning",
-  "version": "0.1.0",
-  "description": "Teach with a live visual workspace operated by Codex during the lesson.",
+  "version": "0.1.0+codex.20260831075715",
+  "description": "Teach with a live visual workspace operated through the Open Learning CLI.",
   "author": {
     "name": "Open Learning contributors"
   },
   "license": "MIT",
-  "keywords": ["education", "learning", "voice", "canvas"],
+  "keywords": [
+    "education",
+    "learning",
+    "voice",
+    "canvas"
+  ],
   "skills": "./skills/",
   "interface": {
     "displayName": "Open Learning",
@@ -14,11 +19,13 @@
     "longDescription": "Open Learning lets Codex build and transform a visual teaching workspace while explaining a topic. The canvas is an active teaching medium, not an after-the-fact summary.",
     "developerName": "Open Learning contributors",
     "category": "Productivity",
-    "capabilities": ["Interactive", "Write"],
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
     "defaultPrompt": [
       "Use Open Learning to teach me Bayesian updating.",
-      "用 Open Learning 画板教我理解递归。"
+      "\u7528 Open Learning \u753b\u677f\u6559\u6211\u7406\u89e3\u9012\u5f52\u3002"
     ]
-  },
-  "mcpServers": "./.mcp.json"
+  }
 }

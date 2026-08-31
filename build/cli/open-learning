@@ -1,0 +1,13 @@
+#!/bin/sh
+
+set -eu
+
+app="/Applications/Open Learning.app/Contents/MacOS/Open Learning"
+cli="/Applications/Open Learning.app/Contents/Resources/cli/open-learning.js"
+
+if [ ! -x "$app" ]; then
+  echo '{"ok":false,"error":{"code":"APP_NOT_INSTALLED","message":"Open Learning is not installed in /Applications."}}' >&2
+  exit 1
+fi
+
+ELECTRON_RUN_AS_NODE=1 exec "$app" "$cli" "$@"

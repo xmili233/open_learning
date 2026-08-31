@@ -9,20 +9,21 @@ Open Learning 是一块由 Codex 在语音学习过程中主动操作的实时�
 The current P0 proves the local technical loop:
 
 ```text
-Codex / MCP client
-  → Open Learning STDIO MCP server
+Codex Voice
+  → Open Learning Skill
+  → open-learning CLI
   → authenticated local socket
   → Electron main process
   → sandboxed renderer
 ```
 
-It includes three MCP tools:
+The CLI is the only canvas interface:
 
-- `learning_board_open`
-- `learning_board_patch`
-- `learning_board_read`
+- `open-learning app`
+- `open-learning status`
+- `open-learning board open|patch|read '<json>'`
 
-The board accepts semantic objects and relationships. Codex never sends HTML, CSS, SVG, or absolute coordinates.
+Board commands automatically launch the desktop app when it is closed. The board accepts semantic objects and relationships; Codex never sends HTML, CSS, SVG, or absolute coordinates. See [`docs/CLI_FIRST_ARCHITECTURE.md`](docs/CLI_FIRST_ARCHITECTURE.md) for the architecture decision.
 
 ## Run locally
 
@@ -34,7 +35,14 @@ npm run check
 npm start
 ```
 
-Keep the Electron app open before connecting the MCP server. During local development, the bundled Plugin manifest is under `plugins/open-learning`.
+In another terminal, exercise the same CLI used by Codex:
+
+```bash
+npm run cli -- status
+npm run cli -- board open '{"title":"Bayesian updating","language":"en","objective":"See belief change"}'
+```
+
+During local development, the bundled Plugin manifest is under `plugins/open-learning`.
 
 Install the Plugin from Codex:
 
@@ -43,16 +51,22 @@ Install the Plugin from Codex:
 3. Add `https://github.com/xmili233/open_learning`.
 4. Install **Open Learning**, then start a new Codex task.
 
-The Electron app checks the local Codex Plugin list every five seconds and
-continues automatically once the installed Plugin is enabled.
+The Electron app checks the local Codex Plugin list every five seconds and continues automatically once the installed Plugin is enabled. The Plugin contains the teaching Skill; the installed desktop app provides the CLI.
 
-`npm run build:mcp` produces the self-contained MCP runtime stored inside the Plugin. `npm run check` rebuilds and tests that exact runtime.
+Build an unsigned macOS PKG with:
 
-The first real Voice test must happen in a new Codex Voice task after the Plugin/MCP server is installed. P0 passes only when the board appears before the corresponding spoken explanation and can be modified repeatedly during the lesson.
+```bash
+npm run package:mac
+```
+
+The PKG installs both `/Applications/Open Learning.app` and `/usr/local/bin/open-learning`. `npm run check` rebuilds and tests the renderer, bundled CLI, local IPC, and board state.
+
+The first real Voice test must happen in a new Codex Voice task after the Plugin is installed. P0 passes only when the Skill invokes the CLI, the board appears before the corresponding spoken explanation, and it can be modified repeatedly during the lesson.
 
 ## Project status
 
 - Product decision: [`docs/MVP_PROPOSAL.md`](docs/MVP_PROPOSAL.md)
+- Architecture decision: [`docs/CLI_FIRST_ARCHITECTURE.md`](docs/CLI_FIRST_ARCHITECTURE.md)
 - Research basis: [`docs/research/mvp-foundations.md`](docs/research/mvp-foundations.md)
 - Product UI source of truth: [`DESIGN.md`](DESIGN.md)
 - UI change proposal template: [`docs/design/UI_CHANGE_TEMPLATE.md`](docs/design/UI_CHANGE_TEMPLATE.md)
@@ -62,7 +76,7 @@ The Electron renderer uses React, TypeScript, Vite, Tailwind CSS 4, and locally
 owned shadcn/ui component source. Add product components through the shadcn CLI;
 do not build parallel custom versions of established UI primitives.
 
-Not included yet: production packaging, code signing, a general-purpose whiteboard, cloud sync, user accounts, or subagents.
+Not included yet: code signing and release automation, a general-purpose whiteboard, cloud sync, user accounts, or subagents.
 
 ## License
 

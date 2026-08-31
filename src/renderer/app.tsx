@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -23,10 +22,8 @@ import { getMessages, nodeKindLabel, resolveLanguage } from "@/messages";
 import type { BoardState, Language, PluginStatus } from "@/types";
 import {
   ArrowLeft,
-  BookOpen,
   Check,
   Copy,
-  Loader2,
   Mic,
   Puzzle,
   RefreshCw,
@@ -73,9 +70,6 @@ function usePluginStatus() {
 function LoadingScreen() {
   return (
     <div className="size-full overflow-auto bg-background">
-      <header className="flex min-h-16 items-center border-b bg-surface px-6">
-        <Skeleton className="h-5 w-32" />
-      </header>
       <main className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-6 py-16">
         <div className="flex flex-col gap-3">
           <Skeleton className="h-8 w-80 max-w-full" />
@@ -84,33 +78,6 @@ function LoadingScreen() {
         <Skeleton className="h-72 w-full rounded-xl" />
       </main>
     </div>
-  );
-}
-
-function PluginBadge({ language, status }: { language: Language; status: PluginStatus }) {
-  const copy = getMessages(language);
-  const installed = status.state === "installed";
-  const checking = status.state === "checking";
-
-  return (
-    <Badge aria-live="polite" className="gap-2 px-2.5 py-1" variant="outline">
-      {checking ? (
-        <Loader2 aria-hidden="true" className="size-3 animate-spin motion-reduce:animate-none" />
-      ) : (
-        <span
-          aria-hidden="true"
-          className={cn(
-            "size-2 rounded-full",
-            installed ? "bg-success" : "bg-warning"
-          )}
-        />
-      )}
-      {installed
-        ? copy.installed
-        : checking
-          ? copy.checkingPlugin
-          : copy.pluginWaiting}
-    </Badge>
   );
 }
 
@@ -236,83 +203,37 @@ function InstallSuccessDialog({
   );
 }
 
-function TutorialDialog({
-  language,
-  onOpenChange,
-  open,
-}: {
-  language: Language;
-  onOpenChange: (open: boolean) => void;
-  open: boolean;
-}) {
+function ReadyScreen({ language }: { language: Language }) {
   const copy = getMessages(language);
 
   return (
-    <Dialog onOpenChange={onOpenChange} open={open}>
-      <DialogContent closeLabel={copy.backToLibrary}>
-        <DialogHeader>
-          <DialogTitle>{copy.tutorialTitle}</DialogTitle>
-          <DialogDescription>{copy.tutorialDescription}</DialogDescription>
-        </DialogHeader>
-        <ol className="flex flex-col gap-4 py-2">
-          {[copy.guideStepOne, copy.guideStepTwo, copy.guideStepThree].map(
-            (step, index) => (
-              <li className="flex items-start gap-3 text-sm leading-5" key={step}>
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface-secondary font-medium">
-                  {index + 1}
-                </span>
-                <span className="pt-1">{step}</span>
-              </li>
-            )
-          )}
-        </ol>
-        <div className="flex flex-col gap-2 rounded-lg border bg-surface-secondary p-4">
-          <p className="text-xs font-medium text-muted-foreground">{copy.guidePromptLabel}</p>
-          <p className="text-sm leading-5">“{copy.guidePrompt}”</p>
+    <div className="size-full overflow-auto bg-background">
+      <main className="mx-auto flex min-h-full w-full max-w-xl items-center justify-center px-6 py-16">
+        <div className="flex flex-col items-center text-center">
+          <Badge
+            className="mb-7 gap-2 bg-surface px-3 py-1.5 text-sm font-normal"
+            variant="outline"
+          >
+            <span className="relative flex size-2" aria-hidden="true">
+              <span className="absolute inline-flex size-full animate-ping rounded-full bg-success opacity-40 motion-reduce:animate-none" />
+              <span className="relative inline-flex size-2 rounded-full bg-success" />
+            </span>
+            {copy.readyStatus}
+          </Badge>
+
+          <h1 className="text-3xl font-semibold leading-10">{copy.readyTitle}</h1>
+          <p className="mt-3 max-w-md text-base leading-6 text-muted-foreground">
+            {copy.readyDescription}
+          </p>
+
+          <div className="mt-8 flex max-w-full items-center gap-2 rounded-full bg-surface-secondary px-4 py-2.5 text-sm">
+            <Mic aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+            <span className="truncate">“{copy.readyPrompt}”</span>
+          </div>
+          <p className="mt-4 text-sm leading-5 text-muted-foreground">{copy.readyHint}</p>
         </div>
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button>{copy.backToLibrary}</Button>
-          </DialogClose>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function TutorialCard({ language, onOpen }: { language: Language; onOpen: () => void }) {
-  const copy = getMessages(language);
-
-  return (
-    <article className="flex flex-col gap-3">
-      <Card className="aspect-video overflow-hidden py-0">
-        <button
-          aria-label={copy.guideTitle}
-          className="flex size-full flex-col justify-between gap-5 p-5 text-left transition-colors hover:bg-surface-secondary/40 motion-reduce:transition-none"
-          onClick={onOpen}
-          type="button"
-        >
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex size-9 items-center justify-center rounded-lg bg-surface-secondary">
-              <BookOpen aria-hidden="true" className="size-5" />
-            </div>
-            <Badge variant="secondary">Guide</Badge>
-          </div>
-          <div className="flex flex-col gap-2">
-            <div className="h-2 w-3/4 rounded-full bg-surface-tertiary" />
-            <div className="h-2 w-1/2 rounded-full bg-surface-tertiary" />
-            <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-              <Mic aria-hidden="true" className="size-4" />
-              {copy.guidePrompt}
-            </div>
-          </div>
-        </button>
-      </Card>
-      <div className="flex flex-col gap-1 px-1">
-        <h2 className="font-medium">{copy.guideTitle}</h2>
-        <p className="text-sm leading-5 text-muted-foreground">{copy.guideDescription}</p>
-      </div>
-    </article>
+      </main>
+    </div>
   );
 }
 
@@ -370,24 +291,21 @@ function LibraryScreen({
   onOpenBoard,
   onRetry,
   state,
-  status,
 }: {
   failed: boolean;
   language: Language;
   onOpenBoard: () => void;
   onRetry: () => void;
   state?: BoardState;
-  status: PluginStatus;
 }) {
   const copy = getMessages(language);
-  const [tutorialOpen, setTutorialOpen] = useState(false);
+
+  if (!failed && state && !state.session_id) {
+    return <ReadyScreen language={language} />;
+  }
 
   return (
     <div className="size-full overflow-auto bg-background">
-      <header className="flex min-h-16 items-center justify-between gap-4 border-b bg-surface px-6">
-        <p className="font-semibold">{copy.brand}</p>
-        <PluginBadge language={language} status={status} />
-      </header>
       <main className="mx-auto flex w-full max-w-[60rem] flex-col gap-8 px-6 py-12">
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl font-semibold leading-8">{copy.libraryTitle}</h1>
@@ -408,21 +326,12 @@ function LibraryScreen({
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             <Skeleton className="aspect-video rounded-xl" />
           </div>
-        ) : (
+        ) : state ? (
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {state.session_id ? (
-              <LessonCard language={language} onOpen={onOpenBoard} state={state} />
-            ) : (
-              <TutorialCard language={language} onOpen={() => setTutorialOpen(true)} />
-            )}
+            <LessonCard language={language} onOpen={onOpenBoard} state={state} />
           </div>
-        )}
+        ) : null}
       </main>
-      <TutorialDialog
-        language={language}
-        onOpenChange={setTutorialOpen}
-        open={tutorialOpen}
-      />
     </div>
   );
 }
@@ -596,10 +505,7 @@ function BoardScreen({
           <Button aria-label={copy.backToLibrary} onClick={onBack} size="icon-sm" variant="ghost">
             <ArrowLeft />
           </Button>
-          <div className="flex min-w-0 flex-col gap-0.5">
-            <p className="truncate text-xs font-medium text-muted-foreground">{copy.brand}</p>
-            <h1 className="truncate text-lg font-semibold leading-6">{state.title}</h1>
-          </div>
+          <h1 className="truncate text-lg font-semibold leading-6">{state.title}</h1>
         </div>
         <Badge aria-live="polite" className="gap-2 px-2.5 py-1" variant="outline">
           <span aria-hidden="true" className="size-2 rounded-full bg-success" />
@@ -669,7 +575,6 @@ export function App() {
         onOpenBoard={() => setView("board")}
         onRetry={() => void loadState()}
         state={state}
-        status={status}
       />
       <InstallSuccessDialog
         language={language}

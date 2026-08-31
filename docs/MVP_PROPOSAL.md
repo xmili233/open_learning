@@ -2,7 +2,7 @@
 
 > 状态：已确认，P0 实现中
 >
-> 版本：0.3
+> 版本：0.4
 >
 > 日期：2026-08-31
 
@@ -10,7 +10,7 @@
 
 建议把 MVP 定义为：
 
-> 一个由 Codex Voice 驱动、供 Codex 在教学过程中主动操作的实时教学画板。Codex 通过 Open Learning Plugin 中的教学 Skill 和 MCP 工具，在解释之前或解释过程中画出、修改、聚焦和清除教学对象，并用语音指着这些对象讲解。
+> 一个由 Codex Voice 驱动、供 Codex 在教学过程中主动操作的实时教学画板。Codex 通过 Open Learning Plugin 中的教学 Skill 调用本机 `open-learning` CLI，在解释之前或解释过程中画出、修改、聚焦和清除教学对象，并用语音指着这些对象讲解。
 
 MVP 不做语音、不托管模型、不做通用白板，也暂不实现 subagent。它只验证一个核心命题：
 
@@ -83,11 +83,11 @@ MVP 只服务：
 1. 用户安装并打开 Open Learning 桌面应用。
 2. 应用解释：语音由 Codex 提供，本应用不录音、不运行模型。
 3. 应用引导用户安装 **Open Learning Plugin**。
-4. 设置向导明确完成并验证 MCP 配置与权限；不能把“Plugin 已安装”当成“工具已连接”。
-5. 应用执行端到端自检：Codex 能看到工具、应用能收到并渲染一次测试调用。
+4. 安装桌面应用时同时安装 `open-learning` CLI；设置向导验证 Plugin 与 CLI 均可用。
+5. 应用执行端到端自检：CLI 能在应用关闭时启动应用，并完成一次测试画板调用。
 6. 应用提示用户在 ChatGPT 桌面端创建一个**新的 Codex Voice 任务**。
 
-这里用户感知上可以继续称为“安装学习 Skill”，但工程交付物应是 Plugin：Skill 负责教学行为，MCP 负责真正操作画板。官方文档也把 Plugin 定义为可同时包含 Skills 与 MCP 工具的分发单元。安装、授权和连接是否能在目标 Codex Voice 环境中顺畅完成，属于 P0 必须实测的产品事实。
+这里用户感知上可以继续称为“安装学习 Skill”，工程交付物仍是 Plugin，但 Plugin 只负责分发 Skill；桌面应用负责安装唯一的 CLI 操作面。安装、命令发现和 Voice 中的本地 shell 调用是否能在目标 Codex 环境顺畅完成，属于 P0 必须实测的产品事实。
 
 ### 3.2 一次学习会话
 
@@ -181,71 +181,62 @@ Agent 只提交：
 
 对象正文只支持受限 CommonMark、行内/块级公式和代码片段；不支持原始 HTML。对象不是永久知识卡片：同一个对象可被更新或删除。流程、比较和概念关系由对象、边与有限布局意图表达，首版不接入 Mermaid。
 
-### 4.4 最小工具面
+### 4.4 最小 CLI interface
 
-只暴露三个 MCP 工具：
+只暴露三个画板命令：
 
 ```text
-learning_board_open
-learning_board_patch
-learning_board_read
+open-learning board open '<json>'
+open-learning board patch '<json>'
+open-learning board read '<json>'
 ```
 
 建议语义：
 
 ```json
 {
-  "tool": "learning_board_open",
-  "arguments": {
-    "title": "Bayesian updating",
-    "language": "en",
-    "objective": "Explain how evidence changes prior beliefs"
-  }
+  "title": "Bayesian updating",
+  "language": "en",
+  "objective": "Explain how evidence changes prior beliefs"
 }
 ```
 
 ```json
 {
-  "tool": "learning_board_patch",
-  "arguments": {
-    "session_id": "123e4567-e89b-42d3-a456-426614174000",
-    "base_version": 3,
-    "operations": [
-      {
-        "op": "put_node",
-        "id": "posterior",
-        "kind": "concept",
-        "title": "Posterior",
-        "body": "Updated belief after considering evidence."
-      },
-      {
-        "op": "put_edge",
-        "from": "prior",
-        "to": "posterior",
-        "label": "updated by evidence"
-      },
-      {
-        "op": "focus",
-        "ids": ["prior", "posterior"]
-      }
-    ],
-    "layout": {
-      "intent": "flow",
-      "direction": "left_to_right",
-      "preserve_existing": true
+  "session_id": "123e4567-e89b-42d3-a456-426614174000",
+  "base_version": 3,
+  "operations": [
+    {
+      "op": "put_node",
+      "id": "posterior",
+      "kind": "concept",
+      "title": "Posterior",
+      "body": "Updated belief after considering evidence."
+    },
+    {
+      "op": "put_edge",
+      "from": "prior",
+      "to": "posterior",
+      "label": "updated by evidence"
+    },
+    {
+      "op": "focus",
+      "ids": ["prior", "posterior"]
     }
+  ],
+  "layout": {
+    "intent": "flow",
+    "direction": "left_to_right",
+    "preserve_existing": true
   }
 }
 ```
 
 ```json
 {
-  "tool": "learning_board_read",
-  "arguments": {
-    "session_id": "123e4567-e89b-42d3-a456-426614174000",
-    "scope": "selection_and_focus",
-    "since_version": 3
-  }
+  "session_id": "123e4567-e89b-42d3-a456-426614174000",
+  "scope": "selection_and_focus",
+  "since_version": 3
 }
 ```
 
@@ -267,32 +258,32 @@ learning_board_read
 Codex Voice（ChatGPT 桌面端）
   ↓ 加载教学 Skill
 Open Learning Plugin
-  ↓ 调用 3 个 MCP 工具
-本地 MCP Adapter
+  ↓ 指导 Codex 调用唯一 CLI
+open-learning CLI：启动、重试、JSON 输入输出
   ↓ 认证的本机 IPC
 Electron Main：校验、状态、持久化
   ↓ 收窄后的 IPC
 Electron Renderer：自动布局与渲染
 ```
 
-### 5.2 推荐连接方式
+### 5.2 连接与启动方式
 
-MVP 优先只暴露一个由 Codex 启动的本地 STDIO MCP Adapter。Adapter 与 Electron Main 之间的进程间通信在 P0 选型：macOS pilot 优先用户私有的 OS 本机 IPC（例如 Unix domain socket）；只有验证不可行时，才退到带随机端口和短期令牌的 `127.0.0.1` loopback。无论具体传输是什么，都保持以下约束：
+MVP 只暴露 `open-learning` CLI。CLI 先探测用户私有的 Unix domain socket；应用未运行时启动 Electron，并在就绪后继续原命令。保持以下约束：
 
 - Electron 启动后创建当前用户私有的临时端点和会话凭据；
 - 运行时描述文件只允许当前用户读取；
-- Adapter 读取描述文件后连接，不把 Electron Renderer 暴露为服务；
-- 应用关闭或凭据过期后，工具返回明确的 `APP_NOT_RUNNING`；
+- CLI 读取描述文件后连接，不把 Electron Renderer 暴露为服务；
+- 应用关闭是可恢复的正常路径，CLI 自动启动应用；启动失败返回稳定错误码；
 - 不开放局域网监听，不使用固定无认证端口，不维护第二套远程 API。
 
-P0 的目标不是先决定 IPC 技术，而是证明真实的 `Codex Voice → Plugin/Skill → MCP → 已打开的 Electron 画板` 链路。该链路是当前方案最大的工程不确定项。
+P0 的目标是证明真实的 `Codex Voice → Plugin/Skill → CLI → Electron 画板` 链路。CLI 是唯一外部 interface，MCP 不作为兼容层保留。完整决策见 [`CLI_FIRST_ARCHITECTURE.md`](CLI_FIRST_ARCHITECTURE.md)。
 
 ### 5.3 Electron 安全底线
 
 - Renderer 保持 `contextIsolation` 和 sandbox；
 - Renderer 不获得 Node.js、文件系统或原始 `ipcRenderer`；
 - Preload 只暴露画板需要的窄接口；
-- Main 对 MCP 参数做 schema、大小、协议版本和状态版本校验；
+- Main 对 CLI 传入的画板参数做 schema、大小和状态版本校验；
 - 禁止原始 HTML 和脚本 URL；Markdown 与公式输出必须清洗；
 - 限制单节点、单批次、总节点数和边数；
 - 外部链接只通过显式用户动作交给系统浏览器；
@@ -304,8 +295,8 @@ MVP 只保存：
 
 - 当前教学工作区状态，用于崩溃恢复和会话内继续；
 - 用户明确保存的会话快照；
-- 每次 board tool 调用的时间、大小、成功或失败；
-- 工具调用、画面可见和对应语音讲解之间的时序事件；
+- 每次 board CLI 调用的时间、大小、成功或失败；
+- CLI 调用、画面可见和对应语音讲解之间的时序事件；
 - 本地设置与界面语言；
 - 可由用户主动导出的匿名试验日志。
 
@@ -324,13 +315,13 @@ MVP 不保存也不处理：
 - macOS 上可安装的 Electron 应用；
 - 中文和英文 UI；
 - 系统语言默认值与手动切换；
-- Plugin / Skill / MCP 连接引导与自检；
+- Plugin / Skill / CLI 连接引导与自检；
 - 一个可被 Codex 在会话过程中连续操作的单人教学工作区；
 - 四类可变教学对象、带标签的有向边；
 - 新增、修改、删除、清空和聚焦操作；
 - 保持空间连续性的增量自动布局、缩放、平移和选择；
 - Markdown 子集、公式和代码渲染；
-- 三个 MCP 工具及严格 schema；
+- 三个 CLI 画板命令及严格 schema；
 - 版本化、原子的增量 patch；
 - 断线、应用未启动、版本冲突和非法输入的可理解错误；
 - 本地会话日志导出；
@@ -400,7 +391,7 @@ MVP 建议满足以下条件才继续扩展：
 | 可用性 | 至少 80% 的参与者无需研究人员帮助完成首次连接和一节课 |
 | 主观价值 | 至少 70% 的参与者明确希望下一次继续使用画板版本 |
 | 教学同步 | 抽样的视觉教学动作中，至少 90% 的画面在对应口头指代之前可见，或在首次指代后 1 秒内可见 |
-| 工具可靠性 | 有效工具调用成功率至少 99%，错误能恢复且不损坏画板 |
+| CLI 可靠性 | 有效 CLI 调用成功率至少 99%，错误能恢复且不损坏画板 |
 | 本地性能 | `patch` 到可见更新的 P95 小于 500 ms |
 | 协议开销 | 固定基准任务中，结构化操作 payload 明显小于等价 HTML，并且不需要布局修复回合 |
 
@@ -410,13 +401,13 @@ MVP 建议满足以下条件才继续扩展：
 
 “减少 agent token 输出”是工程目标，不是最终用户价值。它应拆成：
 
-- 每个教学动作的 board tool 参数字符数；
-- 每次学习的工具调用次数；
+- 每个教学动作的 CLI JSON 参数字符数；
+- 每次学习的 CLI 调用次数；
 - 重试和布局修复回合数；
 - 口头内容与画板内容的重复率；
 - 如果 Codex 侧能取得可靠 usage，再记录完整输出 token。
 
-首版不能仅凭 MCP payload 推断整个对话 token 已下降。画板也可能因为重复表达而增加 token，因此 Skill 必须明确“语音负责讲解与互动，画板负责可见对象、关系和变化”。
+首版不能仅凭 CLI payload 推断整个对话 token 已下降。画板也可能因为重复表达而增加 token，因此 Skill 必须明确“语音负责讲解与互动，画板负责可见对象、关系和变化”。
 
 ## 9. 最小实施顺序
 
@@ -432,13 +423,13 @@ MVP 建议满足以下条件才继续扩展：
 4. 用户中途打断或追问后，Codex 能读取当前版本并正确修改已有对象；
 5. `patch` 到可见更新的延迟不会迫使 Codex 停下来等待或重复解释；
 6. 中英文请求都能触发同样的教学动作循环；
-7. Plugin / MCP 安装路径对 pilot 用户可执行。
+7. 桌面应用 / CLI / Plugin 安装路径对 pilot 用户可执行。
 
 只做一个窗口和最小对象渲染，但必须运行 `open`、多次 `patch` 和一次 `read`。如果 Codex Voice 只能在整段讲解完成后调用工具，P0 判定为 No-Go：这证明不了“实时教学画板”，不应继续把课后总结器包装成目标产品。
 
 ### P1：完成单节课黄金路径
 
-- 三工具协议；
+- 三命令 CLI interface；
 - 四类可变教学对象与边；
 - 稳定的增量布局、聚焦、替换、删除和清空；
 - 先画后讲或边画边讲的 Skill 教学循环；
@@ -460,7 +451,7 @@ MVP 建议满足以下条件才继续扩展：
 ### P3：小规模 pilot
 
 - 先做内部 3–5 人可用性测试；
-- 修复连接和工具可靠性问题；
+- 修复连接和 CLI 可靠性问题；
 - 再做 12–20 人交叉试验；
 - 根据 Go / No-Go 阈值决定是否进入下一阶段。
 
@@ -479,9 +470,9 @@ subagent 不应因为“能力强”而默认启用。官方文档明确指出 s
 
 ## 11. 当前最大风险
 
-### 风险 1：Codex Voice 的工具调用时机不支持实时教学
+### 风险 1：Codex Voice 的 CLI 调用时机不支持实时教学
 
-官方分别确认了 Codex Voice、Plugin 和本地 MCP，但没有证明目标环境中的 Voice 会在语音讲解前或讲解过程中按 Skill 预期调用自定义本地工具。即使“最终能生成节点”，如果它只能在回答结束后发生，也不满足产品定义。P0 必须先验证调用时机、连续修改、打断恢复和安装权限的完整组合。
+官方分别提供了 Codex Voice、Plugin 和本地 shell 能力，但目标环境中的 Voice 是否会在语音讲解前或讲解过程中按 Skill 预期调用 CLI 仍需实测。即使“最终能生成节点”，如果它只能在回答结束后发生，也不满足产品定义。P0 必须先验证调用时机、连续修改、打断恢复和安装权限的完整组合。
 
 ### 风险 2：画板造成双份表达
 
@@ -493,7 +484,7 @@ subagent 不应因为“能力强”而默认启用。官方文档明确指出 s
 
 ### 风险 4：安装摩擦掩盖核心价值
 
-如果 pilot 用户大量时间花在 Plugin / MCP 设置上，无法评价学习体验。P0 后应优先把安装压到可自检的少步骤流程。
+如果 pilot 用户大量时间花在 App / CLI / Plugin 设置上，无法评价学习体验。安装必须是“安装 App 即获得 CLI”，并可自动自检。
 
 ### 风险 5：过早做通用白板
 
@@ -508,7 +499,7 @@ subagent 不应因为“能力强”而默认启用。官方文档明确指出 s
 若采用本方案，需要明确同意以下取舍：
 
 - [x] 实时语音完全由 Codex 提供，本项目不实现语音 API。
-- [x] 用户安装的是包含 Skill 与 MCP 工具的 Open Learning Plugin。
+- [x] 用户安装桌面应用即获得 CLI；Open Learning Plugin 只包含教学 Skill。
 - [x] MVP 不实现 subagent，只在后续作为独立假设验证。
 - [x] 画板是 Codex 在学习过程中操作的实时教学工作区，不是课后总结器。
 - [x] Codex 必须能新增、修改、聚焦、替换和删除教学对象；画面不要求持续累积。
@@ -525,8 +516,7 @@ subagent 不应因为“能力强”而默认启用。官方文档明确指出 s
 
 - [ChatGPT Voice](https://learn.chatgpt.com/docs/features/voice)：Voice 可用于 Chat、Work 和 Codex；任务需要从 Voice 模式开始，并支持自然轮流、打断和协调任务。
 - [Build skills](https://learn.chatgpt.com/docs/build-skills)：Skill 用于封装可复用的工作流指令；分发 Skill 与工具时应使用 Plugin。
-- [Plugins](https://learn.chatgpt.com/docs/plugins)：Plugin 可包含 Skills、Connectors 和 MCP servers；安装后应在新任务中使用。
-- [Model Context Protocol](https://learn.chatgpt.com/docs/extend/mcp?surface=cli)：ChatGPT 桌面端和本地 Codex 支持 STDIO 与 Streamable HTTP MCP。
+- [Plugins](https://learn.chatgpt.com/docs/plugins)：Plugin 用于分发 Skill；安装后应在新任务中使用。
 - [Subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents)：Subagent 适合可并行的复杂工作，但会比单 agent 消耗更多 token。
 - [Electron security](https://www.electronjs.org/docs/latest/tutorial/security)：Renderer 沙箱、上下文隔离、窄 IPC 和不加载不可信代码是安全基础。
 

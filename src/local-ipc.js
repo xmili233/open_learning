@@ -75,11 +75,19 @@ export async function createBoardIpcServer({ store, runtimeFile = defaultRuntime
         }
 
         let result;
-        if (request.action === "open") result = store.open(request.arguments);
+        if (request.action === "status") {
+          const snapshot = store.snapshot();
+          result = {
+            ok: true,
+            running: true,
+            session_id: snapshot.session_id,
+            version: snapshot.version
+          };
+        } else if (request.action === "open") result = store.open(request.arguments);
         else if (request.action === "patch") result = store.patch(request.arguments);
         else if (request.action === "read") result = store.read(request.arguments);
         else throw new BoardError("UNKNOWN_ACTION", "Unknown board action.");
-        if (request.action !== "read") onChange(store.snapshot());
+        if (request.action === "open" || request.action === "patch") onChange(store.snapshot());
         return result;
       }).then(
         (result) => socket.end(`${JSON.stringify(result)}\n`),

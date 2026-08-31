@@ -1,0 +1,8 @@
+#!/bin/sh
+
+set -eu
+
+install -d -m 0755 /usr/local/bin
+install -m 0755 "/Applications/Open Learning.app/Contents/Resources/cli/open-learning" /usr/local/bin/open-learning
+
+exit 0

@@ -4,21 +4,24 @@
   "private": true,
   "type": "module",
   "description": "A live teaching canvas operated by Codex during voice learning.",
+  "author": "Open Learning contributors",
+  "license": "MIT",
   "main": "src/electron/main.js",
   "scripts": {
-    "start": "npm run build:renderer && electron .",
-    "mcp": "node plugins/open-learning/mcp/server.js",
-    "build:mcp": "esbuild plugins/open-learning/mcp/server.js --bundle --platform=node --format=esm --target=node22 --outfile=plugins/open-learning/mcp/server.bundle.js",
+    "start": "npm run build && electron .",
+    "cli": "node src/cli-entry.js",
+    "build": "npm run build:renderer && npm run build:cli",
+    "build:cli": "esbuild src/cli-entry.js --bundle --platform=node --format=esm --target=node22 --outfile=dist/cli/open-learning.js",
     "build:renderer": "vite build",
+    "package:mac": "npm run build && electron-builder --mac pkg",
     "typecheck": "tsc --noEmit",
     "test": "node --test",
-    "check": "npm run build:mcp && npm run typecheck && npm run build:renderer && node --check src/board-state.js && node --check src/local-ipc.js && node --check src/electron/main.js && node --check plugins/open-learning/mcp/server.bundle.js && npm test"
+    "check": "npm run typecheck && npm run build && node --check src/board-state.js && node --check src/cli.js && node --check src/cli-entry.js && node --check src/local-ipc.js && node --check src/electron/main.js && node --check dist/cli/open-learning.js && npm test"
   },
   "engines": {
     "node": ">=22"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "1.30.0",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "lucide-react": "1.37.0",
@@ -36,9 +39,43 @@
     "@types/react-dom": "19.2.5",
     "@vitejs/plugin-react": "6.1.1",
     "electron": "44.0.0",
+    "electron-builder": "26.15.3",
     "esbuild": "0.28.2",
     "tailwindcss": "4.3.3",
     "typescript": "7.0.2",
     "vite": "8.2.2"
+  },
+  "build": {
+    "appId": "org.openlearning.desktop",
+    "productName": "Open Learning",
+    "asar": true,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/renderer/**/*",
+      "src/board-state.js",
+      "src/electron/**/*",
+      "src/local-ipc.js",
+      "src/plugin-status.js",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "dist/cli/open-learning.js",
+        "to": "cli/open-learning.js"
+      },
+      {
+        "from": "build/cli/open-learning",
+        "to": "cli/open-learning"
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.education",
+      "target": "pkg"
+    },
+    "pkg": {
+      "installLocation": "/Applications"
+    }
   }
 }
