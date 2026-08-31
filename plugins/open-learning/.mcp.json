@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "open_learning": {
+      "command": "node",
+      "args": ["./mcp/server.bundle.js"],
+      "cwd": ".",
+      "enabled": true,
+      "startup_timeout_sec": 10,
+      "tool_timeout_sec": 10,
+      "default_tools_approval_mode": "auto"
+    }
+  }
+}
