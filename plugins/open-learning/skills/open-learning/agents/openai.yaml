@@ -1,7 +1,7 @@
 interface:
   display_name: "Open Learning"
-  short_description: "Teach with a live, agent-operated visual workspace"
-  default_prompt: "Use $open-learning to teach me this topic with the live board."
+  short_description: "Teach with a live shared paper through the Open Learning CLI"
+  default_prompt: "Use $open-learning to guide me through this topic with the shared paper."
 
 policy:
   allow_implicit_invocation: true

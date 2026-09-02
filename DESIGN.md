@@ -64,6 +64,10 @@ raw colors belong only in the token definition file.
 | `border` | `rgb(23 23 23 / 10%)` | Controls and containers |
 | `border-strong` | `rgb(23 23 23 / 16%)` | Emphasized boundaries |
 | `disabled` | `rgb(23 23 23 / 5%)` | Disabled control background |
+| `paper` | `#fbfaf6` | The untextured teaching paper |
+| `ink-student` | `#2a2a2e` | Learner-authored marks on the teaching paper |
+| `ink-ai` | `#1f4fb3` | Codex-authored marks and focus arrow on the teaching paper |
+| `marker` | `rgb(255 222 50 / 58%)` | Highlight over exact source text |
 
 Black primary actions and blue interactive affordances have different jobs.
 Blue must not become a decorative brand wash or a second primary-button color.
@@ -100,6 +104,11 @@ requires them.
 - Keep tracking at normal for Chinese and body text.
 - Do not force uppercase or wide tracking on localized product copy.
 - Never use text below 12 px for user-facing information.
+
+The learning-content renderer may use the platform handwriting stack
+`"Hannotate SC", "Hanzi-Pen SC", "Xingkai SC", "Bradley Hand", "Segoe Print", cursive`
+to distinguish the shared paper from product chrome. It must fall back locally
+and must not add a font download or dependency.
 
 ## 5. Geometry
 

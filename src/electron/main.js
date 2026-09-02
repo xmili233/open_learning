@@ -44,8 +44,18 @@ function requestQuit() {
 }
 
 ipcMain.handle("board:get-state", () => store.snapshot());
+ipcMain.handle("board:answer", (_event, input) => {
+  const state = store.answer(input);
+  sendState(state);
+  return state;
+});
 ipcMain.handle("board:select", (_event, ids) => {
   const state = store.select(ids);
+  sendState(state);
+  return state;
+});
+ipcMain.handle("board:tap-blank", () => {
+  const state = store.tapBlank();
   sendState(state);
   return state;
 });

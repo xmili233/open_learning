@@ -1,8 +1,8 @@
 # Open Learning
 
-Open Learning is a live teaching canvas operated by Codex during a voice learning session. Codex draws, changes, focuses, and clears visual teaching objects while it explains. The canvas is part of the lesson, not a summary generated after it.
+Open Learning is a shared teaching paper operated by Codex during a voice learning session. Codex marks the problem, reveals one hint at a time, and reads the learner's answers through the CLI. The paper is part of the lesson, not a summary generated after it.
 
-Open Learning 是一块由 Codex 在语音学习过程中主动操作的实时教学画板。Codex 会在讲解前或讲解过程中绘制、修改、聚焦和清除教学对象；画板是教学过程的一部分，而不是课后总结生成器。
+Open Learning 是一张由 Codex 在语音学习过程中主动操作的共享教学纸。Codex 通过 CLI 标记原题、逐步揭示提示并读回学生作答；它属于教学过程，而不是课后总结生成器。
 
 ## P0 scope
 
@@ -23,7 +23,7 @@ The CLI is the only canvas interface:
 - `open-learning status`
 - `open-learning board open|patch|read '<json>'`
 
-Board commands automatically launch the desktop app when it is closed. The board accepts semantic objects and relationships; Codex never sends HTML, CSS, SVG, or absolute coordinates. See [`docs/CLI_FIRST_ARCHITECTURE.md`](docs/CLI_FIRST_ARCHITECTURE.md) for the architecture decision.
+Board commands automatically launch the desktop app when it is closed. The paper accepts semantic objects, marks, focus, progressive reveals, and learner events; Codex never sends HTML, CSS, SVG, or absolute coordinates. See [`docs/CLI_FIRST_ARCHITECTURE.md`](docs/CLI_FIRST_ARCHITECTURE.md) for the architecture decision.
 
 ## Run locally
 
@@ -39,7 +39,7 @@ In another terminal, exercise the same CLI used by Codex:
 
 ```bash
 npm run cli -- status
-npm run cli -- board open '{"title":"Bayesian updating","language":"en","objective":"See belief change"}'
+npm run cli -- board open '{"title":"Linear equations","language":"en","objective":"Explain each move without giving away the solution"}'
 ```
 
 During local development, the bundled Plugin manifest is under `plugins/open-learning`.
@@ -70,7 +70,7 @@ The first real Voice test must happen in a new Codex Voice task after the Plugin
 - Research basis: [`docs/research/mvp-foundations.md`](docs/research/mvp-foundations.md)
 - Product UI source of truth: [`DESIGN.md`](DESIGN.md)
 - UI change proposal template: [`docs/design/UI_CHANGE_TEMPLATE.md`](docs/design/UI_CHANGE_TEMPLATE.md)
-- Current stage: P0 implementation
+- Current stage: P0 shared-paper loop implemented
 
 The Electron renderer uses React, TypeScript, Vite, Tailwind CSS 4, and locally
 owned shadcn/ui component source. Add product components through the shadcn CLI;

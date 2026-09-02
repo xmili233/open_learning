@@ -20,10 +20,12 @@ test("CLI launches the app and carries the complete board loop", async (t) => {
   const runtimeFile = path.join(directory, "runtime.json");
   const callBoard = (action, args) => callBoardIpc(action, args, { runtimeFile });
   let server;
+  let boardStore;
   let launches = 0;
   const launchApp = async () => {
     launches += 1;
-    server = await createBoardIpcServer({ store: new BoardStore(), runtimeFile });
+    boardStore = new BoardStore();
+    server = await createBoardIpcServer({ store: boardStore, runtimeFile });
   };
   t.after(async () => {
     await server?.close();
@@ -52,14 +54,31 @@ test("CLI launches the app and carries the complete board loop", async (t) => {
       session_id: opened.session_id,
       base_version: opened.version,
       operations: [
-        { op: "put_node", id: "prior", kind: "concept", title: "Prior", body: "Before evidence" },
-        { op: "put_node", id: "posterior", kind: "step", title: "Posterior", body: "After evidence" },
-        { op: "put_edge", from: "prior", to: "posterior", label: "updates to" },
-        { op: "focus", ids: ["posterior"] }
+        {
+          op: "put_node",
+          id: "problem",
+          kind: "problem",
+          owner: "student",
+          body: "Two cars travel toward each other for 240 km."
+        },
+        { op: "mark", id: "problem", spans: ["240 km"] },
+        {
+          op: "put_node",
+          id: "answer",
+          kind: "question",
+          body: "Write the equation",
+          check: { type: "expression", expect: "60t+40t=240" }
+        },
+        { op: "focus", ids: ["answer"] }
       ]
     })
   ], { callBoard, launchApp, stdout: patchedOutput.stream }), 0);
   const patched = patchedOutput.json();
+  boardStore.answer({
+    session_id: opened.session_id,
+    node_id: "answer",
+    input: "100t=240"
+  });
 
   const readOutput = output();
   assert.equal(await runCli([
@@ -69,8 +88,9 @@ test("CLI launches the app and carries the complete board loop", async (t) => {
   ], { callBoard, launchApp, stdout: readOutput.stream }), 0);
   const read = readOutput.json();
   assert.equal(read.nodes.length, 2);
-  assert.deepEqual(read.focus, ["posterior"]);
-  assert.equal(read.version, 2);
+  assert.deepEqual(read.focus, ["answer"]);
+  assert.equal(read.version, 3);
+  assert.equal(read.events[0].result, "correct");
 });
 
 test("CLI rejects malformed input without launching the app", async () => {

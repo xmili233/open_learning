@@ -1,7 +1,7 @@
 {
   "name": "open-learning",
-  "version": "0.1.0+codex.20260831075715",
-  "description": "Teach with a live visual workspace operated through the Open Learning CLI.",
+  "version": "0.1.0+codex.20260902095012",
+  "description": "Teach with a live shared paper operated through the Open Learning CLI.",
   "author": {
     "name": "Open Learning contributors"
   },
@@ -15,8 +15,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Open Learning",
-    "shortDescription": "Learn with a live canvas operated by Codex.",
-    "longDescription": "Open Learning lets Codex build and transform a visual teaching workspace while explaining a topic. The canvas is an active teaching medium, not an after-the-fact summary.",
+    "shortDescription": "Learn with a shared paper operated by Codex.",
+    "longDescription": "Open Learning lets Codex Voice guide a learner while the plugin uses the Open Learning CLI to mark, reveal, and read a shared teaching paper. The learner keeps ownership of the problem and key reasoning steps.",
     "developerName": "Open Learning contributors",
     "category": "Productivity",
     "capabilities": [
@@ -24,8 +24,8 @@
       "Write"
     ],
     "defaultPrompt": [
-      "Use Open Learning to teach me Bayesian updating.",
-      "\u7528 Open Learning \u753b\u677f\u6559\u6211\u7406\u89e3\u9012\u5f52\u3002"
+      "Use Open Learning to help me work through this equation.",
+      "\u7528 Open Learning \u5f15\u5bfc\u6211\u81ea\u5df1\u505a\u51fa\u8fd9\u9053\u9898\u3002"
     ]
   }
 }

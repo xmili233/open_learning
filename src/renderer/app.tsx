@@ -20,35 +20,20 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { getMessages, nodeKindLabel, resolveLanguage } from "@/messages";
 import type { BoardState, Language, PluginStatus } from "@/types";
+import katex from "katex";
+import "katex/dist/katex.min.css";
 import {
-  ArrowLeft,
   Check,
   Copy,
   Mic,
   Puzzle,
   RefreshCw,
 } from "lucide-react";
-import {
-  type MouseEvent,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { positionFor } from "./layout.js";
 
 const MARKETPLACE_URL = "https://github.com/xmili233/open_learning";
 const ONBOARDING_KEY = "open-learning:onboarding-complete";
-
-interface DrawnEdge {
-  d: string;
-  key: string;
-  label: string;
-  labelX: number;
-  labelY: number;
-}
 
 function usePluginStatus() {
   const [status, setStatus] = useState<PluginStatus>({ state: "checking" });
@@ -336,192 +321,241 @@ function LibraryScreen({
   );
 }
 
-function Board({ language, state }: { language: Language; state: BoardState }) {
-  const activeSession = useRef<string | null>(null);
-  const boardRef = useRef<HTMLDivElement>(null);
-  const nodeRefs = useRef(new Map<string, HTMLButtonElement>());
-  const positions = useRef(new Map<string, { x: number; y: number }>());
-  const [drawnEdges, setDrawnEdges] = useState<DrawnEdge[]>([]);
-
-  if (activeSession.current !== state.session_id) {
-    activeSession.current = state.session_id;
-    positions.current.clear();
-  }
-
-  const positionedNodes = state.nodes.map((node, index) => {
-    if (!positions.current.has(node.id) || !state.layout.preserve_existing) {
-      positions.current.set(node.id, positionFor(index, state.layout));
-    }
-    return { node, position: positions.current.get(node.id)! };
+function Formula({ source }: { source: string }) {
+  const display = source.startsWith("$$");
+  const value = source.slice(display ? 2 : 1, display ? -2 : -1);
+  const html = katex.renderToString(value, {
+    displayMode: display,
+    maxExpand: 200,
+    maxSize: 8,
+    output: "htmlAndMathml",
+    strict: "error",
+    throwOnError: false,
+    trust: false,
   });
+  return (
+    <span
+      className={cn(display && "block overflow-x-auto py-2")}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  );
+}
 
-  const measureEdges = useCallback(() => {
-    const board = boardRef.current;
-    if (!board) return;
-    const boardRect = board.getBoundingClientRect();
-    const next = state.edges.flatMap((edge) => {
-      const from = nodeRefs.current.get(edge.from);
-      const to = nodeRefs.current.get(edge.to);
-      if (!(from && to)) return [];
-      const a = from.getBoundingClientRect();
-      const b = to.getBoundingClientRect();
-      const x1 = a.right - boardRect.left;
-      const y1 = a.top + a.height / 2 - boardRect.top;
-      const x2 = b.left - boardRect.left;
-      const y2 = b.top + b.height / 2 - boardRect.top;
-      return [{
-        d: `M ${x1} ${y1} C ${x1 + 55} ${y1}, ${x2 - 55} ${y2}, ${x2} ${y2}`,
-        key: `${edge.from}\u0000${edge.to}\u0000${edge.label}`,
-        label: edge.label,
-        labelX: (x1 + x2) / 2,
-        labelY: (y1 + y2) / 2 - 8,
-      }];
-    });
-    setDrawnEdges(next);
-  }, [state.edges]);
+function InkText({ text }: { text: string }) {
+  return (
+    <>
+      {text.split(/(\$\$[\s\S]*?\$\$|\$[^$\n]+\$)/g).map((part, index) =>
+        part.startsWith("$") ? <Formula key={index} source={part} /> : <span key={index}>{part}</span>
+      )}
+    </>
+  );
+}
 
-  useLayoutEffect(() => {
-    const frame = requestAnimationFrame(measureEdges);
-    window.addEventListener("resize", measureEdges);
-    return () => {
-      cancelAnimationFrame(frame);
-      window.removeEventListener("resize", measureEdges);
-    };
-  }, [measureEdges, state.nodes]);
+function MarkedText({ marks, text }: { marks: string[]; text: string }) {
+  if (!marks.length) return <InkText text={text} />;
+  const markPattern = new RegExp(
+    `(${marks.map((mark) => mark.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`,
+    "g"
+  );
+  return (
+    <>
+      {text.split(/(\$\$[\s\S]*?\$\$|\$[^$\n]+\$)/g).map((part, index) => {
+        if (part.startsWith("$")) {
+          const formula = <Formula source={part} />;
+          return marks.some((mark) => part.includes(mark))
+            ? <mark className="paper-marker" key={index}>{formula}</mark>
+            : <span key={index}>{formula}</span>;
+        }
+        return part.split(markPattern).map((piece, pieceIndex) =>
+          marks.includes(piece)
+            ? <mark className="paper-marker" key={`${index}-${pieceIndex}`}>{piece}</mark>
+            : <span key={`${index}-${pieceIndex}`}>{piece}</span>
+        );
+      })}
+    </>
+  );
+}
 
-  const focused = new Set(state.focus);
-  const selected = new Set(state.selection);
+function FocusArrow() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="absolute -left-12 top-0 size-10 text-ink-ai"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2.2"
+      viewBox="0 0 48 32"
+    >
+      <path d="M3 18 C 14 8, 26 26, 42 15" />
+      <path d="M34 9 L 43 15 L 33 21" />
+    </svg>
+  );
+}
+
+function InkNode({
+  focused,
+  index,
+  language,
+  node,
+  selected,
+  sessionId,
+}: {
+  focused: boolean;
+  index: number;
+  language: Language;
+  node: BoardState["nodes"][number];
+  selected: boolean;
+  sessionId: string;
+}) {
   const copy = getMessages(language);
+  const [answer, setAnswer] = useState(node.input ?? "");
+  useEffect(() => setAnswer(node.input ?? ""), [node.id, node.input]);
+  const select = () => void window.openLearning.select([node.id]);
+  const ink = node.owner === "student" ? "text-ink-student" : "text-ink-ai";
+  const dimmed = !focused && node.kind !== "problem";
 
-  const clearSelection = (event: MouseEvent<HTMLElement>) => {
-    if (event.target === event.currentTarget && state.selection.length) {
-      void window.openLearning.select([]);
-    }
-  };
+  const content = (
+    <>
+      {node.title ? (
+        <span className="mr-2 underline decoration-wavy decoration-1 underline-offset-4">{node.title}</span>
+      ) : null}
+      <MarkedText marks={node.marks} text={node.body} />
+    </>
+  );
+
+  return (
+    <section
+      aria-label={nodeKindLabel(language, node.kind)}
+      className={cn(
+        "relative font-hand text-2xl leading-9 transition-opacity duration-150 motion-reduce:transition-none",
+        ink,
+        dimmed && "opacity-55",
+        selected && "paper-selected"
+      )}
+    >
+      {focused ? <FocusArrow /> : null}
+      {node.kind === "example" ? (
+        <button
+          aria-pressed={selected}
+          className="w-full rounded-xl border-2 border-dashed border-current px-5 py-3 text-left"
+          onClick={(event) => { event.stopPropagation(); select(); }}
+          type="button"
+        >
+          {content}
+          {node.steps.slice(0, node.revealed).map((step, stepIndex) => (
+            <span className="mt-2 block pl-6" key={step}>{stepIndex + 1}. <InkText text={step} /></span>
+          ))}
+        </button>
+      ) : (
+        <>
+          <button
+            aria-pressed={selected}
+            className={cn("relative w-full text-left", node.kind === "step" && "pl-8")}
+            onClick={(event) => { event.stopPropagation(); select(); }}
+            type="button"
+          >
+            {node.kind === "step" ? <span className="absolute left-0">{index}.</span> : null}
+            {content}
+          </button>
+          {node.kind === "question" && node.check ? (
+            <form
+              className="mt-3 flex items-end gap-3 pl-8"
+              onClick={(event) => event.stopPropagation()}
+              onSubmit={(event) => {
+                event.preventDefault();
+                void window.openLearning.answer({
+                  input: answer,
+                  node_id: node.id,
+                  session_id: sessionId,
+                }).catch(() => toast.error(copy.answerFailed));
+              }}
+            >
+              <input
+                aria-label={copy.answerPlaceholder}
+                className="min-w-0 flex-1 border-0 border-b-2 border-ink-student bg-transparent px-2 py-1 font-hand text-2xl text-ink-student shadow-none outline-none focus-visible:ring-0"
+                onChange={(event) => setAnswer(event.target.value)}
+                placeholder={node.check.type === "choice" ? node.check.options?.join(" / ") : copy.answerPlaceholder}
+                value={answer}
+              />
+              <Button
+                aria-label={copy.checkAnswer}
+                disabled={!answer.trim()}
+                size="icon-sm"
+                type="submit"
+                variant="ghost"
+              >
+                <Check data-icon="inline-start" />
+              </Button>
+              <span aria-live="polite" className="min-w-24 text-sm font-sans text-foreground">
+                {node.result === "correct" ? copy.answerCorrect : node.result === "wrong" ? copy.answerWrong : ""}
+              </span>
+            </form>
+          ) : null}
+        </>
+      )}
+    </section>
+  );
+}
+
+function Board({ language, state }: { language: Language; state: BoardState }) {
+  const copy = getMessages(language);
+  let stepIndex = 0;
 
   return (
     <main
-      aria-label={copy.canvasLabel}
-      className="min-h-0 overflow-auto bg-background"
-      onClick={clearSelection}
+      aria-label={`${copy.canvasLabel}: ${state.title}`}
+      className="size-full overflow-auto bg-paper"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) void window.openLearning.tapBlank();
+      }}
     >
-      <div
-        className="relative min-h-[660px] min-w-[1100px]"
-        onClick={clearSelection}
-        ref={boardRef}
-      >
-        <svg
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 size-full overflow-visible"
+      {state.nodes.length ? (
+        <div
+          className="mx-auto flex min-h-full w-full max-w-[60rem] flex-col gap-4 px-16 py-16 max-md:px-8 max-sm:px-6"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) void window.openLearning.tapBlank();
+          }}
         >
-          <defs>
-            <marker id="arrow" markerHeight="8" markerWidth="8" orient="auto" refX="7" refY="4">
-              <path className="fill-muted-foreground" d="M0,0 L8,4 L0,8 Z" />
-            </marker>
-          </defs>
-          {drawnEdges.map((edge) => (
-            <g key={edge.key}>
-              <path
-                className="fill-none stroke-muted-foreground stroke-[1.5px]"
-                d={edge.d}
-                markerEnd="url(#arrow)"
+          {state.nodes.filter((node) => !node.collapsed).map((node) => {
+            if (node.kind === "step") stepIndex += 1;
+            return (
+              <InkNode
+                focused={state.focus.includes(node.id)}
+                index={stepIndex}
+                key={node.id}
+                language={language}
+                node={node}
+                selected={state.selection.includes(node.id)}
+                sessionId={state.session_id!}
               />
-              {edge.label ? (
-                <text
-                  className="fill-muted-foreground stroke-background stroke-[5px] text-[11px] [paint-order:stroke]"
-                  textAnchor="middle"
-                  x={edge.labelX}
-                  y={edge.labelY}
-                >
-                  {edge.label}
-                </text>
-              ) : null}
-            </g>
-          ))}
-        </svg>
-
-        {positionedNodes.map(({ node, position }) => (
-          <button
-            aria-pressed={selected.has(node.id)}
-            className={cn(
-              "absolute min-h-28 w-[230px] rounded-xl border bg-surface p-4 text-left transition-[border-color,opacity,background-color] duration-150 motion-reduce:transition-none",
-              "hover:border-border-strong hover:bg-surface-secondary/40",
-              selected.has(node.id) && "border-interactive ring-2 ring-interactive/20",
-              focused.size > 0 && !focused.has(node.id) && "opacity-30"
-            )}
-            key={node.id}
-            onClick={(event) => {
-              event.stopPropagation();
-              void window.openLearning.select([node.id]);
-            }}
-            ref={(element) => {
-              if (element) nodeRefs.current.set(node.id, element);
-              else nodeRefs.current.delete(node.id);
-            }}
-            style={{ left: position.x, top: position.y }}
-            type="button"
-          >
-            <span className="text-xs font-medium text-muted-foreground">
-              {nodeKindLabel(language, node.kind)}
-            </span>
-            <span className="mt-2 block text-lg font-semibold leading-6">{node.title}</span>
-            {node.body ? (
-              <span className="mt-1 block whitespace-pre-wrap text-sm leading-5 text-muted-foreground">
-                {node.body}
-              </span>
-            ) : null}
-          </button>
-        ))}
-
-        {state.nodes.length === 0 ? (
-          <Empty className="absolute inset-0 border-0">
-            <EmptyHeader>
-              <EmptyTitle>{copy.emptyTitle}</EmptyTitle>
-              <EmptyDescription>{copy.emptyDescription}</EmptyDescription>
-            </EmptyHeader>
-          </Empty>
-        ) : null}
-      </div>
+            );
+          })}
+        </div>
+      ) : (
+        <Empty className="min-h-full border-0">
+          <EmptyHeader>
+            <EmptyTitle>{copy.emptyTitle}</EmptyTitle>
+            <EmptyDescription>{copy.emptyDescription}</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      )}
     </main>
   );
 }
 
 function BoardScreen({
   language,
-  onBack,
   state,
 }: {
   language: Language;
-  onBack: () => void;
   state: BoardState;
 }) {
-  const copy = getMessages(language);
-  const objective = state.objective || copy.objectiveFallback;
-
-  return (
-    <div className="grid size-full grid-rows-[auto_1fr_auto] bg-background">
-      <header className="flex min-h-16 items-center justify-between gap-6 border-b bg-surface px-6 py-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <Button aria-label={copy.backToLibrary} onClick={onBack} size="icon-sm" variant="ghost">
-            <ArrowLeft />
-          </Button>
-          <h1 className="truncate text-lg font-semibold leading-6">{state.title}</h1>
-        </div>
-        <Badge aria-live="polite" className="gap-2 px-2.5 py-1" variant="outline">
-          <span aria-hidden="true" className="size-2 rounded-full bg-success" />
-          {copy.connected}
-        </Badge>
-      </header>
-      <Board language={language} state={state} />
-      <footer className="flex min-h-10 items-center justify-between gap-6 border-t bg-surface px-6 py-2 text-xs text-muted-foreground">
-        <span className="truncate">{objective}</span>
-        <span className="shrink-0">v{state.version}</span>
-      </footer>
-    </div>
-  );
+  return <Board language={language} state={state} />;
 }
 
-export function App() {
+function ProductApp() {
   const { check, status } = usePluginStatus();
   const [state, setState] = useState<BoardState>();
   const [failed, setFailed] = useState(false);
@@ -539,6 +573,7 @@ export function App() {
     const unsubscribe = window.openLearning.onState((nextState) => {
       setFailed(false);
       setState(nextState);
+      if (nextState.session_id) setView("board");
     });
     void loadState();
     return unsubscribe;
@@ -564,7 +599,7 @@ export function App() {
   }
 
   if (view === "board" && state?.session_id) {
-    return <BoardScreen language={language} onBack={() => setView("library")} state={state} />;
+    return <BoardScreen language={language} state={state} />;
   }
 
   return (
@@ -586,4 +621,8 @@ export function App() {
       />
     </>
   );
+}
+
+export function App() {
+  return <ProductApp />;
 }

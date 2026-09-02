@@ -26,7 +26,7 @@ The Skill decides the teaching move. The CLI executes it. Electron owns the live
 3. Installing the desktop product must install the interface. The macOS PKG installs both `Open Learning.app` and `/usr/local/bin/open-learning`.
 4. A closed app is not an error path. Any board command launches the app, waits until its local IPC is ready, and then performs the requested operation.
 5. The renderer never accepts HTML, CSS, SVG, coordinates, shell commands, or arbitrary files. The CLI accepts only the board's validated semantic JSON operations.
-6. Results are compact JSON with stable error codes. Speech carries explanation; the board carries objects, relationships, changes, and attention.
+6. Results are compact JSON with stable error codes. Speech carries explanation; the paper carries the problem, learner work, changes, and attention.
 
 ## CLI interface
 
@@ -63,7 +63,7 @@ The macOS pilot is the current packaging target. Future Windows or Linux install
 | Skill | Teaching sequence, board economy, when to read or patch | Process management or transport |
 | CLI | Command parsing, app launch, readiness, IPC calls, machine output | Teaching policy or rendering |
 | Electron main | Board state, validation, authenticated IPC, renderer updates | Codex conversations or shell access |
-| Renderer | Layout, interaction, accessible presentation | Node.js, filesystem, raw IPC, agent commands |
+| Renderer | Paper layout, learner interaction, local answer checks, accessible presentation | Node.js, filesystem, raw IPC, agent commands |
 
 ## Rejected architecture
 
@@ -74,5 +74,7 @@ The STDIO MCP adapter was deleted. It duplicated the CLI-shaped operation surfac
 - `open-learning status` reports whether the app is running without launching it.
 - A board command succeeds when the app starts closed.
 - `open`, multiple `patch` calls, and `read` complete through the CLI and local IPC.
+- A learner answer advances the board version and appears as an event in the next `read`.
+- A patch based on the pre-answer version fails with `VERSION_CONFLICT` instead of overwriting the learner action.
 - Removing the CLI makes the Plugin unable to operate the canvas; there is no hidden alternative path.
 - A built macOS PKG contains the app, bundled CLI, and installer script for `/usr/local/bin/open-learning`.
